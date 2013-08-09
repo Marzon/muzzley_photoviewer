@@ -1,0 +1,215 @@
+<html><head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>Muzzley Swipe</title>
+    
+    <script src="muzzley-client-0.3.0.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+    <style type="text/css">
+      #homepage_outter { position:relative; width:100%; height:100%;}
+      #homepage_inner { position:absolute; top:0; left:0; z-index:10; width:100%; height:100%;}
+      #homepage_underlay { position:fixed; top:0; left:0; z-index:9; width:100%; height:100%; display:none;}
+      #qrcode {position:fixed; bottom:0; right:0; z-index:11;}
+      #take_control {
+        font-family: Verdana;font-size: 9;bottom: 136;
+        right: 5; position:fixed;  z-index:11; background-color: white }
+      #ac_code {
+        font-family: Verdana;font-size: 9;bottom: 2;
+        right: 15; position:fixed;  z-index:11; background-color: white }
+    </style>
+  </head>
+  <body>
+    
+
+  <div id="homepage_outter">
+    <div id="homepage_inner">
+    
+      <div id="control"><img id="youControl" src="assets/logo.png"></div>
+      <div id="qrcode"><img id="qrCodeContainer" width=150 height=150>
+        <div id="take_control">Take Control using Muzzley</div>
+        <div id="ac_code"></div>
+      </div>
+   </div>
+    <div id="homepage_underlay"></div>
+  </div>
+
+
+    <script>
+
+      // true if we have a participant 
+      var muzzleyControl = false;
+      // app photo Viewer
+      var myAppToken = 'f1e428e55c2e94af';
+
+      var activityIdApp = '';
+
+
+
+      var image_position = 0;
+      document.getElementById("control").style.visibility ='hidden';
+
+
+        muzzley.on('error', function(err) {
+            //console.log("Error: " + err); 
+            logText("Log | Error: " + err);
+        });
+
+        muzzley.connectApp(myAppToken, function(err, activity) {
+            if (err){
+              logText("Log | Connect error: " + err); 
+              return //console.log("Connect error: " + err);
+            } 
+
+            logText('Log | Activty Created - '+activity.activityId);
+            activityIdApp = activity.activityId;
+           
+            var img = document.getElementById('qrCodeContainer');
+            img.src = activity.qrCodeUrl;
+            var code = document.getElementById('ac_code');
+            code.innerHTML = "Activity Code: "+activityIdApp;
+
+            activity.on('participantQuit', function(participant) {
+                logText('Log | Participant Quit - id:' + participant.id);
+            });
+
+            activity.on('participantJoin', function(participant) {
+                logText('Log | Participant Join - id:' + participant.id + ' name: ' + participant.name);
+                
+                // YOU CONTROL!!
+                muzzleyControl = true;
+                document.getElementById("control").style.visibility ='visible';
+      
+
+
+                // A participant joined. Tell him to transform into a gamepad.
+                participant.changeWidget("swipeNavigator", function (err) {
+                    if (err){
+                      logText('Log | Change Widget Error: ' + err);
+                      return //console.log('changeWidget error: ' + err );
+                    }else{
+                      logText('Log | Widget Changed to swipeNavigator');
+                    }
+                });
+
+                participant.on('action', function (action) {
+                    // The action object represents the participant's interaction.
+                    
+                    //console.log(action);
+                    logText('Log | ' +JSON.stringify(action));
+                  if(action.v){
+                      // Change to next or previous image according the direcction received from the widget
+                      slideImages(action.v);            
+                      }
+                });
+
+                participant.on('quit', function (action) {
+                    // You can also check for participant quit events
+                    // directly in each participant object.
+                    //document.getElementById("qrCodeContainer").style.visibility ='visible';
+                    logText('Log | Participant Quit - id:' + participant.id);
+                    //document.getElementById("gallery").style.opacity = 0;
+                    muzzleyControl = false;
+                    document.getElementById("control").style.visibility ='hidden';
+                    setTimeout("carousel_bg("+image_position+")", 5000);
+                });
+
+            });
+        });
+      
+      function slideImages(string){
+        switch(string){
+          case 'l':
+            slideshowBack(); return false;
+            break;
+          case 'r':
+            slideshowUp(); return false;
+            break;
+          case 'u':
+            slideshowUp(); return false;
+            break;
+          case 'd':
+            slideshowBack(); return false;
+            break;
+          default:
+            break;
+        }
+
+      }
+      
+      var num=0;
+
+      imgArray = [
+        ['assets/img1.JPG'],
+        ['assets/img2.JPG'],
+        ['assets/img3.JPG'],
+        ['assets/img4.JPG'],
+        ['assets/img5.JPG'],
+        ['assets/img6.JPG'],
+        ['assets/img7.JPG'],
+        ['assets/img8.JPG'],
+        ['assets/img9.JPG'],
+        ['assets/img10.JPG'],
+        ['assets/img11.JPG'],
+        ['assets/img12.JPG'],
+        ['assets/img13.JPG'],
+      ]
+
+      function slideshow(slide_num) {
+         var img = imgArray[slide_num];
+         $('#homepage_underlay').fadeOut('slow', function () {
+
+          $('#homepage_underlay').css({ 'background-image': 'url('+img+')' });
+          $('#homepage_underlay').css({ 'background-size': '100% auto' });
+
+          $('#homepage_underlay').fadeIn('slow');
+        });
+      }
+
+      function slideshowUp() {
+        image_position = image_position + 1;
+        if (image_position == imgArray.length)
+            image_position = 0;
+        slideshow(image_position);
+      }
+
+      function slideshowBack() {
+       image_position = image_position - 1;
+        if (image_position < 0)
+            image_position = imgArray.length - 1;
+        slideshow(image_position);
+      }
+     
+      /* Write log message on log textarea*/
+      function logText(text){
+        console.log(text);
+      }
+
+
+      function carousel_bg(id) {
+          if (muzzleyControl)
+            return;
+          //var bgimgs = [ '/assets/site/foto1.jpg', '/assets/site/foto2.jpg']; // add images here..
+          var img = imgArray[id];
+          var cnt = imgArray.length; 
+
+        //$('body').animate({"background-image":"url("+img+")"}, 1000);              
+        //$('body').css("background-image", "url("+img+")");
+         $('#homepage_underlay').fadeOut('slow', function () {
+
+          $('#homepage_underlay').css({ 'background-image': 'url('+img+')' });
+          $('#homepage_underlay').css({ 'background-size': '100% auto' });
+
+          $('#homepage_underlay').fadeIn('slow');
+        });
+
+          id = id + 1;
+          if (id==cnt) id = 0;
+
+          image_position = id;
+          if (!muzzleyControl)
+            setTimeout("carousel_bg("+id+")", 5000);
+        }
+        setTimeout("carousel_bg("+image_position+")", 5000);
+
+    </script>
+  
+</body></html>
