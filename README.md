@@ -1,4 +1,6 @@
-muzzley_photoviewer
+Muzzley PhotoViewer
 ===================
 
-A simple photoviewer controled by any smartphone or tablet using Muzzley
+A simple photoviewer controled by any smartphone or tablet using Muzzley!
+
+
